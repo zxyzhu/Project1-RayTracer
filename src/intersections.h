@@ -72,7 +72,95 @@ __host__ __device__ glm::vec3 getSignOfRay(ray r){
 //Cube intersection test, return -1 if no intersection, otherwise, distance to intersection
 __host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
 
-    return -1;
+	//transform ray from world to object space
+	glm::vec3 ro = multiplyMV(box.inverseTransform, glm::vec4(r.origin, 1.0f));
+	glm::vec3 rd = glm::normalize(multiplyMV(box.inverseTransform, glm::vec4(r.direction, 0.0f)));
+
+	ray rt; rt.origin = ro; rt.direction = rd;
+
+	//since cube is in its own unit space, limit between +/- 0.5
+	float bL = -0.5f; float bH = 0.5f;
+
+	//check if rd[i] is parallel and outside of any pair of slabs
+	if(abs(rd.x) <= FLT_EPSILON && ro.x > bH && ro.x < bL) return -1;		
+	if(abs(rd.y) <= FLT_EPSILON && ro.y > bH && ro.y < bL) return -1;
+	if(abs(rd.z) <= FLT_EPSILON && ro.z > bH && ro.z < bL) return -1;
+
+	//find front and back t-values where ray intersect slab
+
+	//x slabs
+	float tNear = (bL - ro.x)/rd.x;
+	float tFar = (bH - ro.x)/rd.x;
+	
+	if(tNear > tFar){
+		float temp = tFar;
+		tFar = tNear;
+		tNear = temp;
+	}
+	if(tFar < 0) return -1;
+
+	//y slabs
+	float tyMin = (bL - ro.y)/rd.y;
+	float tyMax = (bH - ro.y)/rd.y;
+	
+	if(tyMin > tyMax){
+		float temp = tyMin;
+		tyMin = tyMax;
+		tyMax = temp;
+	}
+	if(tyMin > tNear) tNear = tyMin;
+	if(tyMax < tFar) tFar = tyMax;
+
+	if(tNear > tFar || tFar < 0) return -1;
+
+	//z slabs
+	float tzMin = (bL - ro.z)/rd.z;
+	float tzMax = (bH - ro.z)/rd.z;
+	
+	if(tzMin > tzMax){
+		float temp = tzMin;
+		tzMin = tzMax;
+		tzMax = temp;
+	}
+
+	if(tzMin > tNear) tNear = tzMin;
+	if(tzMax < tFar) tFar = tzMax;
+
+	if(tNear > tFar || tFar < 0) return -1;
+
+	//if passed all tests, tNear is the intersection
+
+	//find point of intersection and get the normal in object space
+	glm::vec4 objIntersectionPoint = glm::vec4(getPointOnRay(rt, tNear), 1.0f);
+	glm::vec4 objNormal(0, 0, 0, 0);		//normal in object space
+
+	if(fabs(objIntersectionPoint.x - bH) <= 0.001f){				//if on +x plane, normal is 1 0 0
+		objNormal[0] = 1.0f;
+	}
+	else if(fabs(objIntersectionPoint.x - bL) <= 0.001f){			//if on -x plane, normal is -1 0 0 
+		objNormal[0] = -1.0f;
+	}
+	else if(fabs(objIntersectionPoint.y - bH) <= 0.001f){				//if on +y plane, normal is 0 1 0
+		objNormal[1] = 1.0f;
+	}
+	else if(fabs(objIntersectionPoint.y - bL) <= 0.001f){			//if on -y plane, normal is 0 -1 0 
+		objNormal[1] = -1.0f;
+	}
+	else if(fabs(objIntersectionPoint.z - bH) <= 0.001f){				//if on +z plane, normal is 0 0 1
+		objNormal[2] = 1.0f;
+	}
+	else if(fabs(objIntersectionPoint.z - bL) <= 0.001f){			//if on -z plane, normal is 0 0 -1 
+		objNormal[2] = -1.0f;
+	}
+
+	//find intersection point and transform back to world space
+	glm::vec3 realIntersectionPoint = multiplyMV(box.transform, objIntersectionPoint);
+	glm::vec3 realOrigin = multiplyMV(box.transform, glm::vec4(0,0,0,1));
+
+	intersectionPoint = realIntersectionPoint;
+	normal = glm::normalize(multiplyMV(box.transform, objNormal));
+
+	return glm::length(intersectionPoint - ro);
 }
 
 //LOOK: Here's an intersection test example from a sphere. Now you just need to figure out cube and, optionally, triangle.
@@ -80,13 +168,16 @@ __host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& 
 __host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
   
   float radius = .5;
-        
+  
+  //transform ray to object space
   glm::vec3 ro = multiplyMV(sphere.inverseTransform, glm::vec4(r.origin,1.0f));
   glm::vec3 rd = glm::normalize(multiplyMV(sphere.inverseTransform, glm::vec4(r.direction,0.0f)));
 
   ray rt; rt.origin = ro; rt.direction = rd;
   
   float vDotDirection = glm::dot(rt.origin, rt.direction);
+  
+  //discriminant
   float radicand = vDotDirection * vDotDirection - (glm::dot(rt.origin, rt.origin) - pow(radius, 2));
   if (radicand < 0){
     return -1;
@@ -106,6 +197,7 @@ __host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::
       t = max(t1, t2);
   }
 
+  //find intersection point and transform back to world space
   glm::vec3 realIntersectionPoint = multiplyMV(sphere.transform, glm::vec4(getPointOnRay(rt, t), 1.0));
   glm::vec3 realOrigin = multiplyMV(sphere.transform, glm::vec4(0,0,0,1));
 
