@@ -120,6 +120,43 @@ __global__ void sendImageToPBO(uchar4* PBOpos, glm::vec2 resolution, glm::vec3* 
   }
 }
 
+
+//Does intersection on all of the objects and returns length of closest intersection
+__host__ __device__ float testGeomIntersection(staticGeom* geoms, int numberOfGeoms, ray& r, glm::vec3& intersectionPoint, glm::vec3& normal, int& objID){
+
+	float len = FLT_MAX;	
+	float tempLen = -1;
+	glm::vec3 tempIntersection;
+	glm::vec3 tempNormal;
+	
+	//check for interesction
+	for(int geomInd = 0; geomInd<numberOfGeoms; ++geomInd){
+			
+		if(geoms[geomInd].type == CUBE){
+			tempLen = boxIntersectionTest(geoms[geomInd], r, tempIntersection, tempNormal);
+		}
+
+		else if (geoms[geomInd].type == SPHERE){
+			tempLen = sphereIntersectionTest(geoms[geomInd], r, tempIntersection, tempNormal);
+		}
+			
+		else if(geoms[geomInd].type == MESH){
+				
+		}
+							
+		//if intersection occurs and object is in front of previously intersected object
+		if(tempLen != -1 && tempLen < len){
+			len =tempLen;
+			intersectionPoint = tempIntersection;
+			normal = tempNormal;
+			objID = geomInd;
+		}
+	}
+
+	return len;
+
+}
+
 //TODO: IMPLEMENT THIS FUNCTION
 //Core raytracer kernel
 __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, int rayDepth, glm::vec3* colors,
@@ -136,77 +173,76 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 		ray firstRay = raycastFromCameraKernel(resolution, time, x, y, cam.position, cam.view, cam.up, cam.fov);
 
 		//do intersection test
-		float len = FLT_MAX;
-		float tempLen = -1;
 		int objID = -1;
-		glm::vec3 tempIntersection;
-		glm::vec3 tempNormal;
-		glm::vec3 surfColor(0,0,0);
 		glm::vec3 finalColor(0,0,0);
 
-		//check for interesction
-		for(int i = 0; i<numberOfGeoms; ++i){
-			
-			if(geoms[i].type == CUBE){
-				tempLen = boxIntersectionTest(geoms[i], firstRay, tempIntersection, tempNormal);
-			}
-
-			else if (geoms[i].type == SPHERE){
-				tempLen = sphereIntersectionTest(geoms[i], firstRay, tempIntersection, tempNormal);
-			}
-			
-			else if(geoms[i].type == MESH){
-				
-			}
-							
-			//if intersection occurs and object is in front of previously intersected object
-			if(tempLen != -1 && tempLen < len){
-				len =tempLen;
-				intersection = tempIntersection;
-				normal = tempNormal;
-				objID = i;
-			}
-		}
+		float len = testGeomIntersection(geoms, numberOfGeoms, firstRay, intersection, normal, objID);
 
 		//if no intersection, return
 		if(objID == -1)
 			return;		
 		
 		int matID = geoms[objID].materialid;
-		surfColor = materials[matID].color;
 
 		//check if you intersected with light, if so, just return light color
 		if(materials[matID].emittance > 0){
-			colors[index] = surfColor;
+			colors[index] = materials[matID].color;
 			return;
 		}
 
-		//else, just do normal color computation
+#pragma region lightAndShadow
+
+		//do light and shadow computation
 		for(int i = 0; i < numLights; ++i){
+
 			int lightGeomID = lightID[i];
-			glm::vec3 lightPos = geoms[lightGeomID].translation;
-			//glm::vec3 lightColor = materials[geoms[lightGeomID].materialid].color;
+			glm::vec3 lightPos;
+			glm::vec3 lightColor = materials[geoms[lightGeomID].materialid].color;
 
 			//find a random point on the light
 			if(geoms[lightGeomID].type == CUBE){
-				//lightPos = getRandomPointOnCube(geoms[lightGeomID], time);
+				lightPos = getRandomPointOnCube(geoms[lightGeomID], time);		//CHANGE TO TIME!
 			}
 			else if(geoms[lightGeomID].type == SPHERE){
-				//lightPos = getRandomPointOnSphere(geoms[lightGeomID], time);
+				lightPos = getRandomPointOnSphere(geoms[lightGeomID], 1);	//CHANGE TO TIME!
 			}
 
 			//find vector from intersection to point on light
-			glm::vec3 L = glm::normalize(lightPos - intersection);
+			glm::vec3 L = lightPos - intersection;
+			float distToLight = glm::length(L);
+			L = glm::normalize(L);
+
+			//check if in shadow
+			objID = -1;
+			ray shadowFeeler; 
+			shadowFeeler.direction = L;
+			shadowFeeler.origin = intersection + 0.0001f*L;		//offset origin a little bit so it doesn't self intersect
+			
+			glm::vec3 shadowNormal; glm::vec3 shadowIntersection;
+			len = testGeomIntersection(geoms, numberOfGeoms, shadowFeeler, shadowIntersection, shadowNormal, objID);
+
+			//if intersection occured and intersection is in between the intersection point and the light position
+			if(objID != -1 && len < distToLight){
+				if(materials[geoms[objID].materialid].emittance == 0){		//only cast shadow if we intersected with object that is not a light
+					colors[index] = glm::vec3(0,0,0);
+					return;
+				}
+			}
 
 			//do diffuse calculation
 			float Kd = glm::clamp(glm::dot(L, normal), 0.0f, 1.0f);		//diffuse
-			finalColor = Kd * surfColor ;
-		}
+			finalColor = Kd *  materials[matID].color * lightColor;
 		
+		}
+
+#pragma endregion lightAndShadow
+
+		//output final color
 		colors[index] = finalColor;
 
 	}
 }
+
 
 //TODO: FINISH THIS FUNCTION
 // Wrapper for the __global__ call that sets up the kernel calls and does a ton of memory management
