@@ -17,8 +17,8 @@ __host__ __device__ glm::vec3 getPointOnRay(ray r, float t);
 __host__ __device__ glm::vec3 multiplyMV(cudaMat4 m, glm::vec4 v);
 __host__ __device__ glm::vec3 getSignOfRay(ray r);
 __host__ __device__ glm::vec3 getInverseDirectionOfRay(ray r);
-__host__ __device__ float boxIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal);
-__host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal);
+__host__ __device__ float boxIntersectionTest(staticGeom sphere, ray& r, glm::vec3& intersectionPoint, glm::vec3& normal);
+__host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray& r, glm::vec3& intersectionPoint, glm::vec3& normal);
 __host__ __device__ glm::vec3 getRandomPointOnCube(staticGeom cube, float randomSeed);
 
 //Handy dandy little hashing function that provides seeds for random number generation
@@ -70,7 +70,7 @@ __host__ __device__ glm::vec3 getSignOfRay(ray r){
 
 //TODO: IMPLEMENT THIS FUNCTION
 //Cube intersection test, return -1 if no intersection, otherwise, distance to intersection
-__host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
+__host__ __device__ float boxIntersectionTest(staticGeom box, ray& r, glm::vec3& intersectionPoint, glm::vec3& normal){
 
 	//transform ray from world to object space
 	glm::vec3 ro = multiplyMV(box.inverseTransform, glm::vec4(r.origin, 1.0f));
@@ -165,7 +165,7 @@ __host__ __device__ float boxIntersectionTest(staticGeom box, ray r, glm::vec3& 
 
 //LOOK: Here's an intersection test example from a sphere. Now you just need to figure out cube and, optionally, triangle.
 //Sphere intersection test, return -1 if no intersection, otherwise, distance to intersection
-__host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray r, glm::vec3& intersectionPoint, glm::vec3& normal){
+__host__ __device__ float sphereIntersectionTest(staticGeom sphere, ray& r, glm::vec3& intersectionPoint, glm::vec3& normal){
   
   float radius = .5;
   
