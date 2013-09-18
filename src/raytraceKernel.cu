@@ -87,18 +87,20 @@ __global__ void clearImage(glm::vec2 resolution, glm::vec3* image){
 }
 
 //Kernel that writes the image to the OpenGL PBO directly.
-__global__ void sendImageToPBO(uchar4* PBOpos, glm::vec2 resolution, glm::vec3* image){
+__global__ void sendImageToPBO(uchar4* PBOpos, glm::vec2 resolution, glm::vec3* image, float iterations){
   
   int x = (blockIdx.x * blockDim.x) + threadIdx.x;
   int y = (blockIdx.y * blockDim.y) + threadIdx.y;
   int index = x + (y * resolution.x);
   
+ // iterations = 1;
+
   if(x<=resolution.x && y<=resolution.y){
 
       glm::vec3 color;
-      color.x = image[index].x*255.0;
-      color.y = image[index].y*255.0;
-      color.z = image[index].z*255.0;
+      color.x = image[index].x*255.0 / iterations;
+      color.y = image[index].y*255.0 / iterations;
+      color.z = image[index].z*255.0 / iterations;
 
       if(color.x>255){
         color.x = 255;
@@ -168,10 +170,11 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 
 	glm::vec3 intersection;
 	glm::vec3 normal;
+	glm::vec3 surfColor;
 
 	if((x<=resolution.x && y<=resolution.y)){
 		ray firstRay = raycastFromCameraKernel(resolution, time, x, y, cam.position, cam.view, cam.up, cam.fov);
-
+		
 		//do intersection test
 		int objID = -1;
 		glm::vec3 finalColor(0,0,0);
@@ -183,10 +186,11 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 			return;		
 		
 		int matID = geoms[objID].materialid;
+		surfColor = materials[matID].color;
 
 		//check if you intersected with light, if so, just return light color
 		if(materials[matID].emittance > 0){
-			colors[index] = materials[matID].color;
+			colors[index] += surfColor;
 			return;
 		}
 
@@ -204,7 +208,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 				lightPos = getRandomPointOnCube(geoms[lightGeomID], time);		//CHANGE TO TIME!
 			}
 			else if(geoms[lightGeomID].type == SPHERE){
-				lightPos = getRandomPointOnSphere(geoms[lightGeomID], 1);	//CHANGE TO TIME!
+				lightPos = getRandomPointOnSphere(geoms[lightGeomID], time);	//CHANGE TO TIME!
 			}
 
 			//find vector from intersection to point on light
@@ -223,22 +227,36 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 
 			//if intersection occured and intersection is in between the intersection point and the light position
 			if(objID != -1 && len < distToLight){
+				
 				if(materials[geoms[objID].materialid].emittance == 0){		//only cast shadow if we intersected with object that is not a light
-					colors[index] = glm::vec3(0,0,0);
+					//color is ambient color
+					//colors[index] += glm::vec3(0.1, 0.1, 0.1);
+					colors[index] += glm::vec3(0,0,0);
 					return;
 				}
 			}
 
 			//do diffuse calculation
-			float Kd = glm::clamp(glm::dot(L, normal), 0.0f, 1.0f);		//diffuse
-			finalColor = Kd *  materials[matID].color * lightColor;
+			glm::vec3 diffuse = glm::clamp(glm::dot(L, normal), 0.0f, 1.0f) * surfColor * lightColor;
+
+
+			//specular
+
+			glm::vec3 R = glm::normalize( -L - 2.0f*glm::dot(-L, normal) *normal);
+			glm::vec3 V = -firstRay.direction;			//already normalized
+			
+			glm::vec3 phong = materials[matID].specularColor * 
+					pow(glm::clamp(glm::dot(R, V), 0.0f, 1.0f), materials[matID].specularExponent) * lightColor;
+
+
+			finalColor = glm::vec3(0.1, 0.1, 0.1) + 0.7f* diffuse + 0.2f*phong;
 		
 		}
 
 #pragma endregion lightAndShadow
 
 		//output final color
-		colors[index] = finalColor;
+		colors[index] += finalColor;
 
 	}
 }
@@ -312,7 +330,7 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
   raytraceRay<<<fullBlocksPerGrid, threadsPerBlock>>>(renderCam->resolution, (float)iterations, cam, traceDepth, cudaimage, cudageoms, numberOfGeoms, 
 													cudaMaterials, numLights, cudaLights);
 
-  sendImageToPBO<<<fullBlocksPerGrid, threadsPerBlock>>>(PBOpos, renderCam->resolution, cudaimage);
+  sendImageToPBO<<<fullBlocksPerGrid, threadsPerBlock>>>(PBOpos, renderCam->resolution, cudaimage, (float)iterations);
 
   //retrieve image from GPU
   cudaMemcpy( renderCam->image, cudaimage, (int)renderCam->resolution.x*(int)renderCam->resolution.y*sizeof(glm::vec3), cudaMemcpyDeviceToHost);
