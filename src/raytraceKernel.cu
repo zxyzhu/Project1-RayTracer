@@ -93,7 +93,7 @@ __global__ void sendImageToPBO(uchar4* PBOpos, glm::vec2 resolution, glm::vec3* 
   int y = (blockIdx.y * blockDim.y) + threadIdx.y;
   int index = x + (y * resolution.x);
   
- // iterations = 1;
+  //iterations = 1;
 
   if(x<=resolution.x && y<=resolution.y){
 
@@ -174,7 +174,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 
 	if((x<=resolution.x && y<=resolution.y)){
 		ray firstRay = raycastFromCameraKernel(resolution, time, x, y, cam.position, cam.view, cam.up, cam.fov);
-		
+
 		//do intersection test
 		int objID = -1;
 		glm::vec3 finalColor(0,0,0);
@@ -195,6 +195,9 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 		}
 
 #pragma region lightAndShadow
+
+		glm::vec3 diffuse(0,0,0);
+		glm::vec3 phong(0,0,0);
 
 		//do light and shadow computation
 		for(int i = 0; i < numLights; ++i){
@@ -230,31 +233,38 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 				
 				if(materials[geoms[objID].materialid].emittance == 0){		//only cast shadow if we intersected with object that is not a light
 					//color is ambient color
-					//colors[index] += glm::vec3(0.1, 0.1, 0.1);
-					colors[index] += glm::vec3(0,0,0);
-					return;
+					finalColor = glm::vec3(0,0,0);
+					continue;
 				}
 			}
 
 			//do diffuse calculation
-			glm::vec3 diffuse = glm::clamp(glm::dot(L, normal), 0.0f, 1.0f) * surfColor * lightColor;
-
+			diffuse += glm::clamp(glm::dot(L, normal), 0.0f, 1.0f) * surfColor * lightColor;
+			
+			//clamp diffuse to surface color
+			diffuse.x = clamp(diffuse.x, 0.0f, surfColor.x);
+			diffuse.y = clamp(diffuse.y, 0.0f, surfColor.y);
+			diffuse.z = clamp(diffuse.z, 0.0f, surfColor.z);
 
 			//specular
-
-			glm::vec3 R = glm::normalize( -L - 2.0f*glm::dot(-L, normal) *normal);
-			glm::vec3 V = -firstRay.direction;			//already normalized
+			if(materials[matID].specularExponent != 0){
+				glm::vec3 R = glm::normalize( -L - 2.0f*glm::dot(-L, normal) *normal);
+				glm::vec3 V = -firstRay.direction;			//already normalized
 			
-			glm::vec3 phong = materials[matID].specularColor * 
-					pow(glm::clamp(glm::dot(R, V), 0.0f, 1.0f), materials[matID].specularExponent) * lightColor;
+				phong += materials[matID].specularColor * 
+						pow(glm::clamp(glm::dot(R, V), 0.0f, 1.0f), materials[matID].specularExponent) * lightColor;
+
+				//phong *= 0.5f;
+				//diffuse *= 0.9f;
+			}
 
 
-			finalColor = glm::vec3(0.1, 0.1, 0.1) + 0.7f* diffuse + 0.2f*phong;
-		
 		}
 
 #pragma endregion lightAndShadow
 
+		finalColor += glm::clamp(diffuse + phong, 0.0f, 1.0f);
+	
 		//output final color
 		colors[index] += finalColor;
 

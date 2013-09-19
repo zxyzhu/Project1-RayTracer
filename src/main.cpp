@@ -220,12 +220,47 @@ void runCuda(){
 
 	void keyboard(unsigned char key, int x, int y)
 	{
-		std::cout << key << std::endl;
+		//std::cout << key << std::endl;
+		
 		switch (key) 
 		{
-		   case(27):
-			   exit(1);
-			   break;
+
+		case(27):
+			exit(1);
+			break;
+			
+		case('a'):
+			renderCam->positions[targetFrame].x += 1.0f;
+			iterations = 0;
+			std::cout<<key<<endl;
+			break;
+
+		case('d'):
+			renderCam->positions[targetFrame].x -= 1.0f;
+			iterations = 0;
+			break;
+
+		case('w'):
+			renderCam->positions[targetFrame].y += 1.0f;
+			iterations = 0;
+			break;
+
+		case('s'):
+			renderCam->positions[targetFrame].y -= 1.0f;
+			iterations = 0;
+			break;
+
+		case('j'):
+			renderCam->positions[targetFrame].z += 1.0f;
+			iterations = 0;
+			std::cout<<"move"<<endl;
+			break;
+
+		case('k'):
+			renderCam->positions[targetFrame].z -= 1.0f;
+			iterations = 0;
+			break;
+
 		}
 	}
 
