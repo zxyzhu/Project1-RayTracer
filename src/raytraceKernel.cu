@@ -173,7 +173,26 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 	glm::vec3 surfColor;
 
 	if((x<=resolution.x && y<=resolution.y)){
+
 		ray firstRay = raycastFromCameraKernel(resolution, time, x, y, cam.position, cam.view, cam.up, cam.fov);
+
+		//DOF setup thing
+		float focalLength = cam.focalLength;
+		float aperture = cam.aperture;
+		glm::vec3 focalPoint = firstRay.origin + focalLength * firstRay.direction;
+		
+		//jitter camera
+		glm::vec3 jitterVal = 2.0f * aperture * generateRandomNumberFromThread(resolution, time, x, y);
+		jitterVal -= glm::vec3(aperture);
+		firstRay.origin += jitterVal;
+
+		//find new direction
+		firstRay.direction = glm::normalize(focalPoint - firstRay.origin);
+
+		//antialias sample per pixel
+		jitterVal = generateRandomNumberFromThread(resolution, time, x, y);
+		jitterVal -= glm::vec3(0.5f, 0.5f, 0.5f);
+		firstRay.direction += 0.0015f* jitterVal; 
 
 		//do intersection test
 		int objID = -1;
@@ -274,7 +293,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 
 //TODO: FINISH THIS FUNCTION
 // Wrapper for the __global__ call that sets up the kernel calls and does a ton of memory management
-void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iterations, material* materials, int numberOfMaterials, geom* geoms, int numberOfGeoms){
+void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iterations, material* materials, int numberOfMaterials, geom* geoms, int numberOfGeoms, bool& clear){
   
   int traceDepth = 1; //determines how many bounces the raytracer traces
 
@@ -335,8 +354,15 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
   cam.view = renderCam->views[frame];
   cam.up = renderCam->ups[frame];
   cam.fov = renderCam->fov;
+  cam.focalLength = renderCam->focalLengths[frame];
+  cam.aperture = renderCam->apertures[frame];
 
   //kernel launches
+  if(clear){
+	  clearImage<<<fullBlocksPerGrid, threadsPerBlock>>>(renderCam->resolution, cudaimage); 
+	  clear = false;
+  }
+  else
   raytraceRay<<<fullBlocksPerGrid, threadsPerBlock>>>(renderCam->resolution, (float)iterations, cam, traceDepth, cudaimage, cudageoms, numberOfGeoms, 
 													cudaMaterials, numLights, cudaLights);
 
@@ -357,3 +383,4 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
 
   checkCUDAError("Kernel failed!");
 }
+

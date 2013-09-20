@@ -269,7 +269,7 @@ __host__ __device__ glm::vec3 getRandomPointOnCube(staticGeom cube, float random
 //Generates a random point on a given sphere
 __host__ __device__ glm::vec3 getRandomPointOnSphere(staticGeom sphere, float randomSeed){
 
-	//using trig method
+	//using trig method from wolfram alpha sphere point picking page
 
 	thrust::default_random_engine rng(hash(randomSeed));
     thrust::uniform_real_distribution<float> u01(-1, 1);

@@ -25,6 +25,8 @@ int main(int argc, char** argv){
   bool loadedScene = false;
   finishedRender = false;
 
+  clearImage = false;
+
   targetFrame = 0;
   singleFrameMode = false;
 
@@ -123,12 +125,12 @@ void runCuda(){
     
   
     // execute the kernel
-    cudaRaytraceCore(dptr, renderCam, targetFrame, iterations, materials, renderScene->materials.size(), geoms, renderScene->objects.size() );
+    cudaRaytraceCore(dptr, renderCam, targetFrame, iterations, materials, renderScene->materials.size(), geoms, renderScene->objects.size(), clearImage);
     
     // unmap buffer object
     cudaGLUnmapBufferObject(pbo);
   }else{
-
+	  
     if(!finishedRender){
       //output image file
       image outputImage(renderCam->resolution.x, renderCam->resolution.y);
@@ -174,6 +176,8 @@ void runCuda(){
   }
   
 }
+
+
 
 #ifdef __APPLE__
 
@@ -232,33 +236,37 @@ void runCuda(){
 		case('a'):
 			renderCam->positions[targetFrame].x += 1.0f;
 			iterations = 0;
-			std::cout<<key<<endl;
+			clearImage = true;
 			break;
 
 		case('d'):
 			renderCam->positions[targetFrame].x -= 1.0f;
 			iterations = 0;
+			clearImage = true;
 			break;
 
 		case('w'):
 			renderCam->positions[targetFrame].y += 1.0f;
 			iterations = 0;
+			clearImage = true;
 			break;
 
 		case('s'):
 			renderCam->positions[targetFrame].y -= 1.0f;
 			iterations = 0;
+			clearImage = true;
 			break;
 
 		case('j'):
 			renderCam->positions[targetFrame].z += 1.0f;
 			iterations = 0;
-			std::cout<<"move"<<endl;
+			clearImage = true;
 			break;
 
 		case('k'):
 			renderCam->positions[targetFrame].z -= 1.0f;
 			iterations = 0;
+			clearImage = true;
 			break;
 
 		}

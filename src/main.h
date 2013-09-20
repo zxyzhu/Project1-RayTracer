@@ -104,6 +104,8 @@ void initTextures();
 void initVAO();
 GLuint initShader(const char *vertexShaderPath, const char *fragmentShaderPath);
 
+bool clearImage;
+
 //-------------------------------
 //---------CLEANUP STUFF---------
 //-------------------------------
