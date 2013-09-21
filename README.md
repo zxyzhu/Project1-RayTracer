@@ -31,7 +31,7 @@ The camera controls are:
 SCREENSHOT OF MY RAYTRACER
 -------------------------------------------------------------------------------
 Screen shot
-![Alt text](/renders/screenCap/sampleSceneDOF.bmp "screen shot")
+![Alt text](/renders/screenCap/sampleSceneDOF.jpg "screen shot")
 
 Depth of Field
 ![Alt text](/renders/screenCap/DOF.bmp "DOF")
@@ -49,6 +49,7 @@ VIDEO
 -------------------------------------------------------------------------------
 PERFORMANCE EVALUATION
 -------------------------------------------------------------------------------
+
 
 -------------------------------------------------------------------------------
 THIRD PARTY CODE 
