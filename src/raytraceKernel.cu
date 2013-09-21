@@ -290,14 +290,11 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 				//phong *= 0.5f;
 				//diffuse *= 0.9f;
 			}
-
-
 		}
 
 #pragma endregion lightAndShadow
 		
 		finalColor += glm::clamp(diffuse + phong, 0.0f, 1.0f);
-	
 		//output final color
 		colors[index] += finalColor;
 
