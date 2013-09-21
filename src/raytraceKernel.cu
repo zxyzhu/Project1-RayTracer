@@ -183,123 +183,127 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 	glm::vec3 normal;
 	glm::vec3 surfColor;
 
+	float currDepth = 1;
+
 	if((x<=resolution.x && y<=resolution.y)){
 
-		ray firstRay = raycastFromCameraKernel(resolution, time, x, y, cam.position, cam.view, cam.up, cam.fov);
+		ray firstRay;
 
-		//DOF setup thing
-		float focalLength = cam.focalLength;
+		while(currDepth < rayDepth){
 
-		float aperture = cam.aperture;
+			firstRay = raycastFromCameraKernel(resolution, time, x, y, cam.position, cam.view, cam.up, cam.fov);
+
+			//DOF setup thing
+			float focalLength = cam.focalLength;
+			float aperture = cam.aperture;
+			glm::vec3 focalPoint = firstRay.origin + focalLength * firstRay.direction;
+
+			//jitter camera
+			glm::vec3 jitterVal = 2.0f * aperture * generateRandomNumberFromThread(resolution, time, x, y);
+			jitterVal -= glm::vec3(aperture);
+			firstRay.origin += jitterVal;
+
+			//find new direction
+			firstRay.direction = glm::normalize(focalPoint - firstRay.origin);
+
+
+			//antialias sample per pixel
+			jitterVal = generateRandomNumberFromThread(resolution, time, x, y);
+			jitterVal -= glm::vec3(0.5f, 0.5f, 0.5f);
+			firstRay.direction += 0.0015f* jitterVal; 
+
+			//do intersection test
+			int objID = -1;
+			glm::vec3 finalColor(0,0,0);
+
+			float len = testGeomIntersection(geoms, numberOfGeoms, firstRay, intersection, normal, objID);
+
+			//if no intersection, return
+			if(objID == -1)
+				return;		
 		
-		glm::vec3 focalPoint = firstRay.origin + focalLength * firstRay.direction;
+			int matID = geoms[objID].materialid;
+			surfColor = materials[matID].color;
 
-		//jitter camera
-		glm::vec3 jitterVal = 2.0f * aperture * generateRandomNumberFromThread(resolution, time, x, y);
-		jitterVal -= glm::vec3(aperture);
-		firstRay.origin += jitterVal;
-
-		//find new direction
-		firstRay.direction = glm::normalize(focalPoint - firstRay.origin);
-
-		//antialias sample per pixel
-		jitterVal = generateRandomNumberFromThread(resolution, time, x, y);
-		jitterVal -= glm::vec3(0.5f, 0.5f, 0.5f);
-		firstRay.direction += 0.0015f* jitterVal; 
-
-
-		//do intersection test
-		int objID = -1;
-		glm::vec3 finalColor(0,0,0);
-
-		float len = testGeomIntersection(geoms, numberOfGeoms, firstRay, intersection, normal, objID);
-
-		//if no intersection, return
-		if(objID == -1)
-			return;		
-		
-		int matID = geoms[objID].materialid;
-		surfColor = materials[matID].color;
-
-		//check if you intersected with light, if so, just return light color
-		if(materials[matID].emittance > 0){
-			colors[index] += surfColor;
-			return;
-		}
-
-#pragma region lightAndShadow
-
-		glm::vec3 diffuse(0,0,0);
-		glm::vec3 phong(0,0,0);
-
-		//do light and shadow computation
-		for(int i = 0; i < numLights; ++i){
-
-			int lightGeomID = lightID[i];
-			glm::vec3 lightPos;
-			glm::vec3 lightColor = materials[geoms[lightGeomID].materialid].color;
-
-			//find a random point on the light
-			if(geoms[lightGeomID].type == CUBE){
-				lightPos = getRandomPointOnCube(geoms[lightGeomID], time);		//CHANGE TO TIME!
-			}
-			else if(geoms[lightGeomID].type == SPHERE){
-				lightPos = getRandomPointOnSphere(geoms[lightGeomID], time);	//CHANGE TO TIME!
+			//check if you intersected with light, if so, just return light color
+			if(materials[matID].emittance > 0){
+				colors[index] += surfColor;
+				return;
 			}
 
-			//find vector from intersection to point on light
-			glm::vec3 L = lightPos - intersection;
-			float distToLight = glm::length(L);
-			L = glm::normalize(L);
+	#pragma region lightAndShadow
 
-			//check if in shadow
-			objID = -1;
-			ray shadowFeeler; 
-			shadowFeeler.direction = L;
-			shadowFeeler.origin = intersection + 0.0001f*L;		//offset origin a little bit so it doesn't self intersect
+			glm::vec3 diffuse(0,0,0);
+			glm::vec3 phong(0,0,0);
+
+			//do light and shadow computation
+			for(int i = 0; i < numLights; ++i){
+
+				int lightGeomID = lightID[i];
+				glm::vec3 lightPos;
+				glm::vec3 lightColor = materials[geoms[lightGeomID].materialid].color;
+
+				//find a random point on the light
+				if(geoms[lightGeomID].type == CUBE){
+					lightPos = getRandomPointOnCube(geoms[lightGeomID], time);		//CHANGE TO TIME!
+				}
+				else if(geoms[lightGeomID].type == SPHERE){
+					lightPos = getRandomPointOnSphere(geoms[lightGeomID], time);	//CHANGE TO TIME!
+				}
+
+				//find vector from intersection to point on light
+				glm::vec3 L = lightPos - intersection;
+				float distToLight = glm::length(L);
+				L = glm::normalize(L);
+
+				//check if in shadow
+				objID = -1;
+				ray shadowFeeler; 
+				shadowFeeler.direction = L;
+				shadowFeeler.origin = intersection + 0.0001f*L;		//offset origin a little bit so it doesn't self intersect
 			
-			glm::vec3 shadowNormal; glm::vec3 shadowIntersection;
-			len = testGeomIntersection(geoms, numberOfGeoms, shadowFeeler, shadowIntersection, shadowNormal, objID);
+				glm::vec3 shadowNormal; glm::vec3 shadowIntersection;
+				len = testGeomIntersection(geoms, numberOfGeoms, shadowFeeler, shadowIntersection, shadowNormal, objID);
 
-			//if intersection occured and intersection is in between the intersection point and the light position
-			if(objID != -1 && len < distToLight){
+				//if intersection occured and intersection is in between the intersection point and the light position
+				if(objID != -1 && len < distToLight){
 				
-				if(materials[geoms[objID].materialid].emittance == 0){		//only cast shadow if we intersected with object that is not a light
-					//color is ambient color
-					finalColor = glm::vec3(0,0,0);
-					continue;
+					if(materials[geoms[objID].materialid].emittance == 0){		//only cast shadow if we intersected with object that is not a light
+						//color is ambient color
+						finalColor = glm::vec3(0,0,0);
+						continue;
+					}
+				}
+
+				//do diffuse calculation
+				diffuse += glm::clamp(glm::dot(L, normal), 0.0f, 1.0f) * surfColor * lightColor;
+			
+				//clamp diffuse to surface color
+				diffuse.x = clamp(diffuse.x, 0.0f, surfColor.x);
+				diffuse.y = clamp(diffuse.y, 0.0f, surfColor.y);
+				diffuse.z = clamp(diffuse.z, 0.0f, surfColor.z);
+
+				//specular
+				if(materials[matID].specularExponent != 0){
+					glm::vec3 R = glm::normalize( -L - 2.0f*glm::dot(-L, normal) *normal);
+					glm::vec3 V = -firstRay.direction;			//already normalized
+			
+					phong += materials[matID].specularColor * 
+							pow(glm::clamp(glm::dot(R, V), 0.0f, 1.0f), materials[matID].specularExponent) * lightColor;
+
+					//phong *= 0.5f;
+					//diffuse *= 0.9f;
 				}
 			}
 
-			//do diffuse calculation
-			diffuse += glm::clamp(glm::dot(L, normal), 0.0f, 1.0f) * surfColor * lightColor;
-			
-			//clamp diffuse to surface color
-			diffuse.x = clamp(diffuse.x, 0.0f, surfColor.x);
-			diffuse.y = clamp(diffuse.y, 0.0f, surfColor.y);
-			diffuse.z = clamp(diffuse.z, 0.0f, surfColor.z);
-
-			//specular
-			if(materials[matID].specularExponent != 0){
-				glm::vec3 R = glm::normalize( -L - 2.0f*glm::dot(-L, normal) *normal);
-				glm::vec3 V = -firstRay.direction;			//already normalized
-			
-				phong += materials[matID].specularColor * 
-						pow(glm::clamp(glm::dot(R, V), 0.0f, 1.0f), materials[matID].specularExponent) * lightColor;
-
-				//phong *= 0.5f;
-				//diffuse *= 0.9f;
-			}
-
-
-		}
-
-#pragma endregion lightAndShadow
+	#pragma endregion lightAndShadow
 		
-		finalColor += glm::clamp(diffuse + phong, 0.0f, 1.0f);
+			finalColor += glm::clamp(diffuse + phong, 0.0f, 1.0f);
 	
-		//output final color
-		colors[index] += finalColor;
+			//output final color
+			colors[index] += finalColor;
+			currDepth ++;
+		}
 
 	}
 }
@@ -312,7 +316,7 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
   int traceDepth = 1; //determines how many bounces the raytracer traces
 
   // set up crucial magic
-  int tileSize = 16;
+  int tileSize = 8;
   dim3 threadsPerBlock(tileSize, tileSize);			//each block has 8 * 8 threads
   dim3 fullBlocksPerGrid((int)ceil(float(renderCam->resolution.x)/float(tileSize)), (int)ceil(float(renderCam->resolution.y)/float(tileSize)));
   
