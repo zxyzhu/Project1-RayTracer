@@ -45,11 +45,18 @@ Depth of Field
 -------------------------------------------------------------------------------
 VIDEO
 -------------------------------------------------------------------------------
+Video link:
+
+https://vimeo.com/75069384
 
 -------------------------------------------------------------------------------
 PERFORMANCE EVALUATION
 -------------------------------------------------------------------------------
+![Alt text](/renders/performanceAnalysis.png "Performance Analysis")
 
+Link to pdf
+
+https://github.com/zxyzhu/Project1-RayTracer/blob/master/renders/PerformanceAnalysis.pdf
 
 -------------------------------------------------------------------------------
 THIRD PARTY CODE 
@@ -68,53 +75,3 @@ FUTURE WORK
 -------------------------------------------------------------------------------
 I am currently working on reflective surfaces. After that I plan to make 
 refraction and create better camera controls. 
-
--------------------------------------------------------------------------------
-README
--------------------------------------------------------------------------------
-All students must replace or augment the contents of this Readme.md in a clear 
-manner with the following:
-
-* A brief description of the project and the specific features you implemented.
-* At least one screenshot of your project running.
-* A 30 second or longer video of your project running.  To create the video you
-  can use http://www.microsoft.com/expression/products/Encoder4_Overview.aspx 
-* A performance evaluation (described in detail below).
-
--------------------------------------------------------------------------------
-PERFORMANCE EVALUATION
--------------------------------------------------------------------------------
-
-
-
--------------------------------------------------------------------------------
-SELF-GRADING
--------------------------------------------------------------------------------
-* On the submission date, email your grade, on a scale of 0 to 100, to Liam,
-  liamboone+cis565@gmail.com, with a one paragraph explanation.  Be concise and
-  realistic.  Recall that we reserve 30 points as a sanity check to adjust your
-  grade.  Your actual grade will be (0.7 * your grade) + (0.3 * our grade).  We
-  hope to only use this in extreme cases when your grade does not realistically
-  reflect your work - it is either too high or too low.  In most cases, we plan
-  to give you the exact grade you suggest.
-* Projects are not weighted evenly, e.g., Project 0 doesn't count as much as
-  the path tracer.  We will determine the weighting at the end of the semester
-  based on the size of each project.
-
--------------------------------------------------------------------------------
-SUBMISSION
--------------------------------------------------------------------------------
-As with the previous project, you should fork this project and work inside of
-your fork. Upon completion, commit your finished project back to your fork, and
-make a pull request to the master repository.  You should include a README.md
-file in the root directory detailing the following
-
-* A brief description of the project and specific features you implemented
-* At least one screenshot of your project running, and at least one screenshot
-  of the final rendered output of your raytracer
-* A link to a video of your raytracer running.
-* Instructions for building and running your project if they differ from the
-  base code
-* A performance writeup as detailed above.
-* A list of all third-party code used.
-* This Readme file, augmented or replaced as described above in the README section.
