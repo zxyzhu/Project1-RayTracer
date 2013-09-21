@@ -116,7 +116,7 @@ EYE         0 4.5 15
 VIEW        0 0 -1
 UP          0 1 0
 FOCAL		12
-APERTURE	0
+APERTURE	0.3
 
 OBJECT 0
 cube
