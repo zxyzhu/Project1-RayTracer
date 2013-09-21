@@ -30,7 +30,7 @@ The camera controls are:
 -------------------------------------------------------------------------------
 SCREENSHOT OF MY RAYTRACER
 -------------------------------------------------------------------------------
-![Alt text](/tree/master/renders/screenCap/DOF.bmp "screen shot")
+![Alt text](/renders/screenCap/DOF.bmp "screen shot")
 
 -------------------------------------------------------------------------------
 VIDEO
