@@ -30,7 +30,17 @@ The camera controls are:
 -------------------------------------------------------------------------------
 SCREENSHOT OF MY RAYTRACER
 -------------------------------------------------------------------------------
-![Alt text](/renders/screenCap/DOF.bmp "screen shot")
+Screen shot
+![Alt text](/renders/screenCap/sampleScene.bmp "screen shot")
+
+Depth of Field
+![Alt text](/renders/screenCap/DOF.bmp "DOF")
+
+Two lights
+![Alt text](/renders/screenCap/twoLights.bmp "two lights")
+
+Depth of Field
+![Alt text](/renders/screenCap/twoLightsDOF.bmp "two lights with DOF")
 
 -------------------------------------------------------------------------------
 VIDEO
