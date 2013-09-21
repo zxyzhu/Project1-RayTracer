@@ -64,10 +64,10 @@ THIRD PARTY CODE
 * None, but here are the resources I used for box intersection and sampling
 random points on spheres:
 
-*Box intersection: 
+* Box intersection: 
 http://www.siggraph.org/education/materials/HyperGraph/raytrace/rtinter3.htm
 
-*Sphere random point generation:
+* Sphere random point generation:
 http://mathworld.wolfram.com/SpherePointPicking.html
 
 -------------------------------------------------------------------------------
