@@ -164,6 +164,17 @@ __host__ __device__ float testGeomIntersection(staticGeom* geoms, int numberOfGe
 __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, int rayDepth, glm::vec3* colors,
                             staticGeom* geoms, int numberOfGeoms, material* materials, int numLights, int* lightID){
 
+
+	//__shared__ int sharedLights[3];
+	//for(int l = 0; l < numLights; ++l){
+	//	sharedLights [l] = lightID[l]; 
+	//}
+
+	//__shared__ staticGeom sharedGeom[5];
+	//for(int g = 0; g<numberOfGeoms; ++g){
+	//	sharedGeom[g] = geoms[g];
+	//}
+
 	int x = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int y = (blockIdx.y * blockDim.y) + threadIdx.y;
 	int index = x + (y * resolution.x);
@@ -178,9 +189,11 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 
 		//DOF setup thing
 		float focalLength = cam.focalLength;
+
 		float aperture = cam.aperture;
-		glm::vec3 focalPoint = firstRay.origin + focalLength * firstRay.direction;
 		
+		glm::vec3 focalPoint = firstRay.origin + focalLength * firstRay.direction;
+
 		//jitter camera
 		glm::vec3 jitterVal = 2.0f * aperture * generateRandomNumberFromThread(resolution, time, x, y);
 		jitterVal -= glm::vec3(aperture);
@@ -193,6 +206,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 		jitterVal = generateRandomNumberFromThread(resolution, time, x, y);
 		jitterVal -= glm::vec3(0.5f, 0.5f, 0.5f);
 		firstRay.direction += 0.0015f* jitterVal; 
+
 
 		//do intersection test
 		int objID = -1;
@@ -281,7 +295,7 @@ __global__ void raytraceRay(glm::vec2 resolution, float time, cameraData cam, in
 		}
 
 #pragma endregion lightAndShadow
-
+		
 		finalColor += glm::clamp(diffuse + phong, 0.0f, 1.0f);
 	
 		//output final color
@@ -298,7 +312,7 @@ void cudaRaytraceCore(uchar4* PBOpos, camera* renderCam, int frame, int iteratio
   int traceDepth = 1; //determines how many bounces the raytracer traces
 
   // set up crucial magic
-  int tileSize = 8;
+  int tileSize = 16;
   dim3 threadsPerBlock(tileSize, tileSize);			//each block has 8 * 8 threads
   dim3 fullBlocksPerGrid((int)ceil(float(renderCam->resolution.x)/float(tileSize)), (int)ceil(float(renderCam->resolution.y)/float(tileSize)));
   

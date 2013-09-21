@@ -27,6 +27,8 @@ int main(int argc, char** argv){
 
   clearImage = false;
 
+  totalTime = 0;
+
   targetFrame = 0;
   singleFrameMode = false;
 
@@ -68,7 +70,7 @@ int main(int argc, char** argv){
 	init(argc, argv);
   #endif
 
-  initCuda();
+	initCuda();
 
   initVAO();
   initTextures();
@@ -130,7 +132,10 @@ void runCuda(){
     // unmap buffer object
     cudaGLUnmapBufferObject(pbo);
   }else{
-	  
+	 
+	  //t = clock() - t;
+	  //cout<<totalTime/CLOCKS_PER_SEC/renderCam->iterations<<endl;
+
     if(!finishedRender){
       //output image file
       image outputImage(renderCam->resolution.x, renderCam->resolution.y);
@@ -144,7 +149,7 @@ void runCuda(){
       
       gammaSettings gamma;
       gamma.applyGamma = true;
-      gamma.gamma = 1.0/2.2;
+      gamma.gamma = 1.0;
       gamma.divisor = renderCam->iterations;
       outputImage.setGammaSettings(gamma);
       string filename = renderCam->imageName;
@@ -157,7 +162,7 @@ void runCuda(){
       outputImage.saveImageRGB(filename);
       cout << "Saved frame " << s << " to " << filename << endl;
       finishedRender = true;
-      if(singleFrameMode==true){
+	  if(singleFrameMode==true){
         cudaDeviceReset(); 
         exit(0);
       }
@@ -203,7 +208,14 @@ void runCuda(){
 #else
 
 	void display(){
+
+		//t = clock();
+		
 		runCuda();
+
+		//t = clock() - t;
+	    //cout<<((float)t)/CLOCKS_PER_SEC<<endl;
+		//totalTime += t;
 
 		string title = "565Raytracer | " + utilityCore::convertIntToString(iterations) + " Iterations";
 		glutSetWindowTitle(title.c_str());
