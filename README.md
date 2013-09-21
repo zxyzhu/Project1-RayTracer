@@ -30,7 +30,7 @@ The camera controls are:
 -------------------------------------------------------------------------------
 SCREENSHOT OF MY RAYTRACER
 -------------------------------------------------------------------------------
-![screenshot](https://raw.github.com/zxyzhu/Project1-RayTracer/blob/master/renders/screenCap/DOF.bmp)
+![screenshot](https://raw.github.com/zxyzhu/Project1-RayTracer/tree/master/renders/screenCap/DOF.bmp)
 
 -------------------------------------------------------------------------------
 VIDEO
