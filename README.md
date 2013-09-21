@@ -38,10 +38,10 @@ Screen shot
 Depth of Field
 ![Alt text](/renders/screenCap/DOF.bmp "DOF")
 
-Two lights, no DOF
+No DOF
 ![Alt text](/renders/screenCap/noDOF.bmp "No DOF")
 
-Depth of Field
+Two lights with depth of Field
 ![Alt text](/renders/screenCap/twoLightDOF.bmp "two lights with DOF")
 
 -------------------------------------------------------------------------------
