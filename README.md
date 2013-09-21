@@ -17,15 +17,17 @@ features:
 * Supersampled anti-aliasing
 * Movable camera
 
+Please use the new scene files provided in the repository. phongMatScene.txt is 
+the scene I used to render the images below.  
 The scenes are still read through the command line. I added focal length and 
 aperture as new camera features that can be read in through the scene files, 
-so the old scene files would not work. Please use the new scene files provided
-in the repository. 
+so the old scene files would not work. 
 
 The camera controls are:
 * 'a' and 'd' keys to translate along the x axis
 * 'w' and 's' keys to translate along the y axis
 * 'j' and 'k' keys to translate along the z axis
+
 
 -------------------------------------------------------------------------------
 SCREENSHOT OF MY RAYTRACER
