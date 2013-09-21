@@ -116,7 +116,7 @@ EYE         0 4.5 15
 VIEW        0 0 -1
 UP          0 1 0
 FOCAL		12
-APERTURE	0.3
+APERTURE	0
 
 OBJECT 0
 cube
@@ -188,12 +188,4 @@ material 8
 frame 0
 TRANS       0 10 0
 ROTAT       0 0 90
-SCALE       .3 3 3
-
-OBJECT 9
-cube
-material 7 
-frame 0
-TRANS       -5 5 0
-ROTAT       0 0 0
 SCALE       .3 3 3
